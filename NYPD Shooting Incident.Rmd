@@ -1,0 +1,254 @@
+---
+title: "NYPD Shooting Incident"
+author: "JF Schultz"
+date: "2022-09-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r library, echo = FALSE}
+library(tidyverse)
+library(lubridate)
+```
+### Document Overview {#links}  
+
+Note:  internal document links in blue
+
+[**Step One**](#step-1) - Start an Rmd Document  
+Start an Rmd document that describes and imports the shooting project dataset in a reproducible manner  
+
+[**Step Two**](#step-2) - Tidy and Transform your Data  
+Add to your Rmd document a summary of the data and clean up your dataset by changing appropriate variables to factor and date types and getting rid of any columns not needed.  Show the summary of your data to be sure there is no missing data. If there is missing data, describe how you plan to handle it.  
+
+[**Step Three**](#step-3) - Add Visualizations and Analysis  
+Add at least two different visualizations & some analysis to your Rmd.  Does this raise additional questions that you should investigate?  
+
+[**Step Four**](#step-4) - Add Bias Identification  
+Write the conclusion to your project report and include any possible sources of bias.  Be sure to identify what your personal bias might be and how you have mitigated that.
+
+
+
+### Step One:  Import Data {#step-1} 
+
+Importing Data...  
+
+Data will be imported from the website here: <https://catalog.data.gov/dataset>  
+
+The landing page can be found at <https://data.cityofnewyork.us/Public-Safety/NYPD-Shooting-Incident-Data-Historic-/833y-fsy8>  
+
+with .pdf information and data dictionary at <https://data.cityofnewyork.us/api/views/833y-fsy8/files/e4e3d86c-348f-4a16-a17f-19480c089429?download=true&filename=NYPD_Shootings_Incident_Level_Data_Footnotes.pdf>  
+
+import dataset from web...
+
+```{r import-data}
+url = 'https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv?accessType=DOWNLOAD'
+df = read_csv(url)
+```
+
+
+### Step 2 - Tidy and Transform Data {#step-2}
+
+This section describes in step-by-step manner how the dataset is cleaned.  A summary of the steps and all code integrated into one block is provided below in [Summary](#summary-clean).
+
+-  check variable names
+-  identify variables to remove (and remove)
+-  check variable classes
+-  reassign character classes as factors (for specific vars)
+-  recode date variable(s) as date class variables
+-  find and recode bad or missing values to NA
+
+Examine what variables are in dataset...
+```{r var-names}
+colnames(df)
+```
+
+can cross reference with the data dictionary (referenced above)
+and remove unwanted variables...  
+
+Probably don't need X_COORD_CD, Y_COORD_CD, Latitude, Longitude, Lon_Lat, or LOCATION_DESC
+```{r remove-variables}
+df <- df %>%
+    select(-c(X_COORD_CD, Y_COORD_CD, Latitude, Longitude, Lon_Lat, 
+              LOCATION_DESC))
+```
+
+examine the class type of each variable...  
+can be found in output for `df` or `lapply(df, class)`  
+decide which ones should be factors and change to factor...
+
+changing certain variables to factor...
+```{r change-factor}
+
+# alternatively:
+# df <- df %>% mutate(across(BORO:VIC_RACE,  ~ as.factor(.)))
+
+fcols <- c('BORO', 'PRECINCT', 'PERP_AGE_GROUP',
+           'STATISTICAL_MURDER_FLAG', 'PERP_SEX', 'PERP_RACE', 
+           'VIC_AGE_GROUP', 'VIC_SEX', 'VIC_RACE', 'JURISDICTION_CODE')
+df <- df %>%
+      mutate(across(all_of(fcols), factor))
+
+# alternatively
+# individual column:  df$BORO = as.factor(df$BORO)
+# individual column:  df <- df %>% mutate(PRECINCT = as.factor(PRECINCT))
+# alternatively:  mutate_at(all_of(cols), as.factor)
+# alternativley:  mutate(across(BORO:VIC_RACE,  ~ as.factor(.)))
+# alternatively:  mutate(across(-c(INCIDENT_KEY, OCCUR_DATE, OCCUR_TIME), factor))
+```
+
+Change the date variable to a date class variable...
+```{r change-date}
+df <- df %>%
+    mutate(OCCUR_DATE = mdy(OCCUR_DATE))
+```
+
+Fix missing / other / unknown values...  
+first, check for bad or missing values not coded as NA...
+```{r check-summary}
+# note use of maxsum = val to see additional levels in (Other)
+summary(df, maxsum = 12)
+
+# note can check individual variables using unique()
+# unique(df$PERP_RACE)
+# or loop through all the variables
+```
+
+recode any bad or missing values not coded as NA...
+```{r recode1}
+df <- df %>%
+    mutate(across(-c(INCIDENT_KEY, OCCUR_DATE, OCCUR_TIME), 
+                  ~ na_if(., 'U'))) %>%
+    mutate(across(-c(INCIDENT_KEY, OCCUR_DATE, OCCUR_TIME), 
+                  ~ na_if(., 'UNKNOWN')))
+    # alternatively:  mutate_if(is.factor, ~ na_if(., 'UNKNOWN'))
+
+# once recoded, also need to remove/drop any now empty factor levels
+df = droplevels(df)
+
+```
+
+recode any additional specific bad values as NA...
+```{r recode2}
+df$PERP_AGE_GROUP[df$PERP_AGE_GROUP %in% c('1020', '224', '940')] = NA
+df = droplevels(df)
+```
+
+now re-examine summary (should look pretty clean)...
+```{r summary}
+summary(df)
+```
+
+
+#### Summary  - Data Cleaning {#summary-clean}
+
+-   Imported Data
+-   Removed:  X/Y and Lat/Long coordinates, and Location Decsription
+-   Recoded variables as factors (except INCIDENT_KEY and DATE/TIME vars)
+-   Recoded OCCUR_DATE as a date class variable
+-   Recoded bad/missing values (such as U or UKNKOWN) as NA
+-   Recoded bad values in PERP_AGE_GROUP as NA
+
+Can all be done in one code block...
+```{r import-clean}
+url = 'https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv?accessType=DOWNLOAD'
+df = read_csv(url, show_col_types = FALSE)
+df <- df %>%
+    select(-c(X_COORD_CD, Y_COORD_CD, Latitude, Longitude, Lon_Lat, LOCATION_DESC)) %>%
+    mutate(across(BORO:VIC_RACE,  ~ as.factor(.))) %>%
+    mutate(OCCUR_DATE = mdy(OCCUR_DATE)) %>%
+    mutate_if(is.factor, ~ na_if(., 'U')) %>%
+    mutate_if(is.factor, ~ na_if(., 'UNKNOWN'))
+df$PERP_AGE_GROUP[df$PERP_AGE_GROUP %in% c('1020', '224', '940')] = NA
+df = droplevels(df)
+```
+
+### Step Three - Vizualizations and Analysis {#step-3}
+
+[Section One](#sect-1) - Exploratory Data Analysis  
+
+[Section Two](#sect-2) - Examining Incidents by Borough
+
+[Section Three](#sect-3) - Examining Incidents by Date and Time
+
+#### Section One - Exploratory Data Analysis {#sect-1}
+
+looking at the distribution of the factor variables...  
+(note that missing values such as 'UNKNOWN' were recoded to NA, and NA's are omitted in plots by default)
+```{r baseplots}
+par(mfrow = c(2,2))
+for (i in 2:13){
+      barplot(table(df[i]), col = i, las = 2, main = colnames(df)[i])
+}
+par(mfrow = c(1,1))
+```
+
+From the exploratory data, two relationships will be examined further, incident occurrence by borough, and occurrence by date and time.
+
+
+#### Section Two - Incidents by Boroughs {#sect-2}  
+
+looking further at the distribution...
+```{r buroughs-plot}
+ggplot(df, aes(BORO)) + 
+    geom_bar() +
+    ggtitle('Total Shooting Incidents by Borough') +
+    ylab('Total Incidents') +
+    xlab('Borough') +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+However, this data shows totals regardless of population size.  To better understand the number of shooting incidents by borough, the data are standardized to a per capita measurement.
+```{r pop-data}
+
+# population statistics from 2020 census
+df.pop = data.frame(BORO = levels(df$BORO),
+                    POP = c(1472654, 2736074, 1694263, 2405464, 495747))
+
+df.boro <- df %>% 
+          count(BORO) %>%
+          left_join(df.pop, by = 'BORO') %>%
+          mutate(INC_PER_CAP = n / POP, 
+                 INC_PER_THOU = INC_PER_CAP * 1000,
+                 INC_PER_100K = INC_PER_CAP * 100000)
+
+# alternatively:  group_by(BORO) %>% count()
+# alternatively:  group_by(BORO) %>% tally
+
+```
+```{r graph-percap}
+ggplot(df.boro, aes(BORO, INC_PER_100K)) +
+      geom_col(aes(fill = BORO)) +
+      ggtitle('Per Capita Shooting Incidents by Borough') +
+      ylab('Incidents (per 100K people)') +
+      xlab('Borough') +
+      theme(plot.title = element_text(hjust = 0.5))
+```
+
+**Comment:**  It *looks* like the number of shooting incidents is not evenly distributed among the 5 boroughs.  It appears that the per capita rate is higher in the Bronx and Brooklyn.  The Pearson's chi-squared test can be used to see if there is a statistically significant difference between the observed vs. expected number in each category (borough) if expected to be evenly distributed.
+
+
+
+```{r chisq-test-boro}
+chisq.test(x = df.boro$INC_PER_100K,
+           simulate.p.value = TRUE)
+```
+
+#### Section Three - Incidents by DATE / TIME {#sect-3}  
+
+
+```{r plot-by-day}
+ggplot(df, aes(unclass(OCCUR_TIME), fill = BORO)) +
+  geom_bar() +
+  scale_x_binned(breaks = seq(0, 86400, by = 3600),
+                 limits = c(0, 86400),
+                 show.limits = TRUE,
+                 labels = c('MN', 1:12, 1:11, 'MN')) +
+  ggtitle('SHOOTING INCIDENTS BY TIME OF DAY') +
+  ylab('Number of Incidents') +
+  xlab('TIme of Incident(s)') +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
