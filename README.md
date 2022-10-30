@@ -2,7 +2,7 @@
 
 This repository is for the final project assigment for CU Boulder DTSA 5301
 
-NYPD Shooting Incident Data - Report and Video Presentation
+NYPD Shooting Incident Data - Report and Presentation
 
 and
 
