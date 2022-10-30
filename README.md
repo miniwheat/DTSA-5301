@@ -13,4 +13,4 @@ COVID-19 Report
 NYPD Shooting Presentation - Power Point presentation without video/audio  
 (The full presentation with video can be viewed at:  https://youtu.be/vn1HfJxkNbU)  
 NYPD Shooting Indicent Data.Rmd - R code and documentation  
-NYPD Shooting Incident Data.htm - knitted text / report  
+NYPD Shooting Incident Data.html - knitted text / report  
