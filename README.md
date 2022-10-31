@@ -10,7 +10,11 @@ COVID-19 Report
 
 # Repository Contents
 
+NYPD Shooting Incident Data.html - report (html format)  
+NYPD Shooting Indicent Data.Rmd - R code and documentation  
 NYPD Shooting Presentation - Power Point presentation without video/audio  
 (The full presentation with video can be viewed at:  https://youtu.be/vn1HfJxkNbU)  
-NYPD Shooting Indicent Data.Rmd - R code and documentation  
-NYPD Shooting Incident Data.html - knitted text / report  
+
+COVID-19 Data Report - no R code (html format)  
+COVID-19 Data Report - with R code (html format)  
+COVID-19 Data Report - source (.Rmd format)  
